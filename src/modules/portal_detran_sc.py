@@ -257,37 +257,74 @@ def login_detran_sc(api_key: str) -> webdriver.Chrome:
         raise
 
 
-def verificar_debitos_multas(driver: webdriver.Chrome) -> tuple[str, dict]:
+def verificar_debitos_multas(driver: webdriver.Chrome, placa: str, renavam: str) -> tuple[str, dict]:
     dados = {'debitos': [], 'multas': []}
     status = "Sem Débitos ou Multas"
-    time.sleep(4)
 
-    # Débitos
+    try:
+        # Primeiro clique no botão de consulta
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+        time.sleep(2)
+
+        # Espera os campos de entrada serem visíveis
+        campos = WebDriverWait(driver, 20).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "form.consulta-dossie__form label.form-label")))
+
+        id_placa = campos[0].get_attribute("for")
+        id_renavam = campos[1].get_attribute("for")
+
+        # Preenche Placa
+        campo_placa = driver.find_element(By.CSS_SELECTOR, f"input#{id_placa}")
+        campo_placa.clear()
+        campo_placa.send_keys(placa)
+
+        # Preenche Renavam
+        campo_renavam = driver.find_element(By.CSS_SELECTOR, f"input#{id_renavam}")
+        campo_renavam.clear()
+        campo_renavam.send_keys(renavam)
+
+        time.sleep(4)
+
+        # Submete novamente o formulário
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+        time.sleep(4)
+
+    except Exception as e:
+        print(f"[ERRO AO PREENCHER FORMULÁRIO] {e}")
+        return "Erro ao preencher dados", {'debitos': 'erro', 'multas': 'erro'}
+
+    # Tenta extrair débitos
     try:
         blocos = driver.find_elements(By.CLASS_NAME, 'lista-debitos__item')[1:]
         for bloco in blocos:
             divs = bloco.find_elements(By.TAG_NAME, 'div')
-            dados['debitos'].append({'descricao': divs[0].text, 'vencimento': divs[1].text, 'valor': divs[2].text})
+            if len(divs) >= 3:
+                dados['debitos'].append({'descricao': divs[0].text, 'vencimento': divs[1].text, 'valor': divs[2].text})
         if dados['debitos']:
             status = "Com Débitos"
-    except:
-        pass
+    except Exception as e:
+        print(f"[ERRO AO LER DÉBITOS] {e}")
 
-    # Multas
+    # Tenta extrair multas
     try:
         acc = driver.find_element(By.XPATH, "//*[contains(text(),'INFRAÇÕES')]/..")
         driver.execute_script("arguments[0].scrollIntoView();", acc)
         acc.click()
+        time.sleep(2)
+
         itens = acc.find_elements(By.CLASS_NAME, 'lista-dados__item')
         multa = {}
         for it in itens:
-            key = it.find_element(By.CLASS_NAME, 'lista-dados__item--title').text.strip()
-            val = it.find_element(By.TAG_NAME, 'p').text.strip()
-            multa[key] = val
+            try:
+                key = it.find_element(By.CLASS_NAME, 'lista-dados__item--title').text.strip()
+                val = it.find_element(By.TAG_NAME, 'p').text.strip()
+                multa[key] = val
+            except:
+                continue
+
         if multa:
             dados['multas'].append(multa)
             status = status.replace("Sem", "Com") if status == "Sem Débitos ou Multas" else status + " e Multas"
-    except:
-        pass
+    except Exception as e:
+        print(f"[ERRO AO LER MULTAS] {e}")
 
     return status, dados

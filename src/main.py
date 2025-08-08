@@ -77,8 +77,7 @@ def executar_fluxo_por_parte(df_parte: pd.DataFrame, api_key: str) -> pd.DataFra
         try:
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))).click()
             time.sleep(2)
-
-            status, info = verificar_debitos_multas(driver)
+            status, info = verificar_debitos_multas(driver, placa, renavam)
             # Agrupa débitos
             for deb in info.get('debitos', []):
                 resultados.append({**deb, 'Placa': placa, 'Renavam': renavam, 'Tipo': 'Débito', 'Status Geral': status})
