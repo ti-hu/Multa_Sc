@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Imports dos módulos do projeto
 from sec import acessos
-from modules.env_loader import DIAS_DA_SEMANA, PATH_LOGS
+from modules.env_loader import DIAS_DA_SEMANA, DIR_DIAS, configurar_logging
 from modules.banco import get_info_veiculos
 from modules.portal_detran_sc import (
     click_certificado,
@@ -22,7 +22,7 @@ from modules.portal_detran_sc import (
 )
 
 
-def dividir_dataframe(df: pd.DataFrame, partes: int = 5) -> List[pd.DataFrame]:
+def dividir_dataframe(df: pd.DataFrame, partes: int = 7) -> List[pd.DataFrame]:
     """Divide o DataFrame em `partes` sub-DataFrames intercalados."""
     return [df.iloc[i::partes].reset_index(drop=True) for i in range(partes)]
 
@@ -32,7 +32,7 @@ def gerar_planilhas_iniciais():
     os.makedirs("Dias", exist_ok=True)
     df_all = get_info_veiculos("hu")
     for idx, parte in enumerate(dividir_dataframe(df_all)):
-        nome = Path("Dias") / f"{DIAS_DA_SEMANA[idx]}.xlsx"
+        nome = Path(DIR_DIAS) / f"{DIAS_DA_SEMANA[idx]}.xlsx"
         parte.to_excel(nome, index=False)
         logging.info(f"Planilha gerada: {nome} ({len(parte)} registros)")
 
@@ -43,7 +43,7 @@ def obter_parte_do_dia() -> Tuple[Path, pd.DataFrame]:
     if dia_idx > 4:
         raise SystemExit("Fim de semana: não há o que processar.")
 
-    arquivo = Path("Dias") / f"{DIAS_DA_SEMANA[dia_idx]}.xlsx"
+    arquivo = Path(DIR_DIAS) / f"{DIAS_DA_SEMANA[dia_idx]}.xlsx"
     if not arquivo.exists():
         raise FileNotFoundError(f"Planilha do dia não encontrada: {arquivo}")
 
@@ -97,14 +97,6 @@ def executar_fluxo_por_parte(df_parte: pd.DataFrame, api_key: str) -> pd.DataFra
 
     driver.quit()
     return pd.DataFrame(resultados)
-
-
-def configurar_logging():
-    """Configura o módulo logging para gravar em arquivo organizado por mês."""
-    pasta_mes = PATH_LOGS / datetime.today().strftime('%Y-%m')
-    pasta_mes.mkdir(parents=True, exist_ok=True)
-    arquivo_log = pasta_mes / f"Multas_DNIT_{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
-    logging.basicConfig(filename=arquivo_log, level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', encoding='utf-8')
 
 
 def main():

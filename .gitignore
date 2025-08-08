@@ -109,3 +109,5 @@ geckodriver
 
 # VS Code Python extension
 .python-version
+
+output/
