@@ -1,5 +1,6 @@
 # config/config.py
 import os
+from datetime import datetime
 from pathlib import Path
 import logging
 
@@ -20,5 +21,13 @@ DIAS_DA_SEMANA = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'do
 
 
 # Configuração de logging
-def configurar_logging(nome_log='app.log'):
-    logging.basicConfig(filename=LOGS_DIR / nome_log, level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+def configurar_logging():
+    # Pasta do mês (ex: logs/2025-08)
+    pasta_mes = LOGS_DIR / datetime.today().strftime('%Y-%m')
+    pasta_mes.mkdir(parents=True, exist_ok=True)
+
+    # Nome do arquivo com dia e hora (ex: 2025-08-07_09-30-00.log)
+    nome_arquivo_log = pasta_mes / f'Multas_DENT_SC_{datetime.today():%Y-%m-%d_%H-%M-%S}.log'
+
+    # Configuração do logging
+    logging.basicConfig(filename=nome_arquivo_log, level=logging.INFO, format='%(asctime)s - %(levelname)s : %(message)s', encoding='utf-8')
